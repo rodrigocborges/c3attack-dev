@@ -57,7 +57,7 @@ MonoBehaviour:
   m_LightOrder: 0
   m_OverlapOperation: 0
   m_NormalMapDistance: 3
-  m_NormalMapQuality: 1
+  m_NormalMapQuality: 2
   m_UseNormalMap: 0
   m_ShadowIntensityEnabled: 1
   m_ShadowIntensity: 0.75
@@ -350,7 +350,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4179951036983446232}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.027, y: 0.884, z: 0}
+  m_LocalPosition: {x: 0.027, y: 1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 4035164916287473401}
@@ -409,9 +409,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6bd36dc77c29d6a45b7c61a03fd5fee9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speed: 6
+  spriteObject: {fileID: 3797100575417838720}
+  speed: 6.5
   fireSound: {fileID: 8300000, guid: d6d34397a349c9146a6ff8fdd1a0a529, type: 3}
   firePoint: {fileID: 3494635116462257164}
+  fireRate: 0.5
 --- !u!114 &700038070863215172
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -477,7 +479,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
   m_PlayOnAwake: 0
-  m_Volume: 0.3
+  m_Volume: 0.85
   m_Pitch: 1
   Loop: 0
   Mute: 0

@@ -51,7 +51,7 @@ Rigidbody2D:
   m_UseAutoMass: 0
   m_Mass: 1
   m_LinearDrag: 0
-  m_AngularDrag: 0.05
+  m_AngularDrag: 3000
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_Interpolate: 0
@@ -109,10 +109,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7ca1799fae8ee24eacd0eec1b803129, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  blood: {fileID: 2251977807574119824, guid: 431bdc224ea71df449e5f931b50d102c, type: 3}
   splashSound: {fileID: 8300000, guid: 5805756a8e476534a976a3fa334e2c5b, type: 3}
   sounds:
   - {fileID: 8300000, guid: 642fc77357319384abc7c07f906c976e, type: 3}
-  speed: 3
+  speed: 6
 --- !u!61 &1045442733838253076
 BoxCollider2D:
   m_ObjectHideFlags: 0

@@ -6,6 +6,7 @@ using UnityEngine;
 
 public class Zombie : MonoBehaviour
 {
+    [SerializeField] private GameObject blood;
     [SerializeField] private AudioClip splashSound;
     [SerializeField] private AudioClip[] sounds;
     [SerializeField] private float speed;
@@ -22,7 +23,7 @@ public class Zombie : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
         PV = GetComponent<PhotonView>();
 
-        if(Random.value >= 0.8f)
+        if(Random.value >= 0.7f)
         {
             PV.RPC("PlaySoundRpc", RpcTarget.All);
         }
@@ -41,10 +42,19 @@ public class Zombie : MonoBehaviour
         AudioSource.PlayClipAtPoint(splashSound, transform.position, 1);
     }
 
+    [PunRPC]
+    void SpawnBloodEffect()
+    {
+        Instantiate(blood, new Vector3(transform.position.x, transform.position.y, -1), transform.rotation);
+    }
+
     void Update()
     {
         foreach(PlayerController playerController in FindObjectsOfType<PlayerController>())
         {
+            if (!playerController.IsAlive())
+                continue;
+
             if(playerController.GetComponent<PhotonView>() != null)
             {
                 PhotonView photonViewPlayer = playerController.GetComponent<PhotonView>();
@@ -59,7 +69,10 @@ public class Zombie : MonoBehaviour
             }
         }
 
-        float playerIdWithSmallerDistance = playersInfo.Aggregate((l, r) => l.Value < r.Value ? l : r).Key;
+        if (playersInfo == null || !playersInfo.Any())
+            return;
+
+        int playerIdWithSmallerDistance = playersInfo.Aggregate((l, r) => l.Value < r.Value ? l : r).Key;
         
         foreach(PhotonView pv in FindObjectsOfType<PhotonView>())
         {

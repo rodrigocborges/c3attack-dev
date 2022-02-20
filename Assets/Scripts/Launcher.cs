@@ -17,11 +17,9 @@ public class Launcher : MonoBehaviourPunCallbacks
     [SerializeField] private TMP_Text playerList;
     [SerializeField] private GameObject btnStartGame;
 
-    private string playerName = "";
-    private string roomName = "";
-
     void Start()
     {
+        //Faz com que todos os clientes sincronizem a cena com o master client
         PhotonNetwork.AutomaticallySyncScene = true;
         PhotonNetwork.ConnectUsingSettings();
 
@@ -29,35 +27,48 @@ public class Launcher : MonoBehaviourPunCallbacks
         loadingPanel.SetActive(true);
         roomPanel.SetActive(false);
 
-        playerName = string.Format("Player {0}", Random.Range(0, 9999));
-        roomName = "dev";
+        playerNameField.text = string.Format("Player {0}", Random.Range(0, 9999));
+        roomNameField.text = "dev";
 
-        SetPlayerName(playerName);
-        SetRoomName(roomName);
+        SetPlayerName();
+        SetRoomName();
     }
 
     private void Update()
     {
-        SetPlayerName(playerNameField.text);
-        SetRoomName(roomNameField.text);
+        //SetPlayerName(playerNameField.text);
+        //SetRoomName(roomNameField.text);
     }
 
-    public void SetPlayerName(string newPlayerName)
+    public void SetPlayerName()
     {
-        playerName = newPlayerName;
-        PhotonNetwork.NickName = playerName;
+        if (string.IsNullOrWhiteSpace(playerNameField.text))
+        {
+            AlertManager.Instance.DangerText("INSIRA UM NOME");
+            return;
+        }
+
+        PhotonNetwork.NickName = playerNameField.text;
     }
 
-    public void SetRoomName(string newRoomName)
+    public void SetRoomName()
     {
-        roomName = newRoomName;
+        if (string.IsNullOrWhiteSpace(roomNameField.text))
+        {
+            AlertManager.Instance.DangerText("INSIRA NOME DE SALA");
+            return;
+        }
     }
 
     public void HostGame()
     {
-        if (string.IsNullOrEmpty(roomName))
-            roomName = "dev";
-        PhotonNetwork.CreateRoom(roomName, new Photon.Realtime.RoomOptions { IsVisible = true, MaxPlayers = 4, IsOpen = true });
+        if (string.IsNullOrWhiteSpace(roomNameField.text) || string.IsNullOrWhiteSpace(playerNameField.text))
+        {
+            AlertManager.Instance.DangerText("PREENCHA OS CAMPOS");
+            return;
+        }
+
+        PhotonNetwork.CreateRoom(roomNameField.text, new Photon.Realtime.RoomOptions { IsVisible = true, MaxPlayers = 4, IsOpen = true });
 
         connectedUIPanel.SetActive(false);
         loadingPanel.SetActive(true);
@@ -72,9 +83,13 @@ public class Launcher : MonoBehaviourPunCallbacks
 
     public void JoinGame()
     {
-        if (string.IsNullOrEmpty(roomName))
-            roomName = "dev";
-        PhotonNetwork.JoinRoom(roomName);
+        if (string.IsNullOrWhiteSpace(roomNameField.text) || string.IsNullOrWhiteSpace(playerNameField.text))
+        {
+            AlertManager.Instance.DangerText("PREENCHA OS CAMPOS");
+            return;
+        }
+        
+        PhotonNetwork.JoinRoom(roomNameField.text);
 
         connectedUIPanel.SetActive(false);
         loadingPanel.SetActive(true);
@@ -96,8 +111,6 @@ public class Launcher : MonoBehaviourPunCallbacks
     {
         connectedUIPanel.SetActive(true);
         loadingPanel.SetActive(false);
-
-        PhotonNetwork.NickName = playerName;
     }
 
     public override void OnJoinedRoom()

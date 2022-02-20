@@ -40,6 +40,8 @@ public class Bullet : MonoBehaviour
         {
             PhotonView photonViewZombie = collision.gameObject.GetComponent<PhotonView>();
             photonViewZombie.RPC("PlaySplashSound", RpcTarget.All);
+            photonViewZombie.RPC("SpawnBloodEffect", RpcTarget.All);
+
             if (GetComponent<PhotonView>().IsMine)
             {
                 PhotonNetwork.Destroy(collision.gameObject);
@@ -48,6 +50,14 @@ public class Bullet : MonoBehaviour
             {
                 Destroy(collision.gameObject);
             }
+
+            if(Random.value >= 0.7f)
+            {
+                AlertManager.Instance.RandomPhrases();
+            }
+
+            //Ao encostar no zumbi, remover instantaneamente a bala evitando problemas no rigidbody
+            StartCoroutine(DestroyBullet(0));
         }
     }
 

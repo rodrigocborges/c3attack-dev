@@ -22,5 +22,7 @@ public class PlayerManager : MonoBehaviour
     void CreatePlayerController()
     {
         PhotonNetwork.Instantiate(Path.Combine("Prefabs", "Player"), Vector3.zero, Quaternion.identity);
+
+        AlertManager.Instance.ShowText("SOBREVIVA!", Color.yellow, 1f);
     }
 }

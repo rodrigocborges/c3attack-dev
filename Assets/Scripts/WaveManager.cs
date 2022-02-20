@@ -54,7 +54,7 @@ public class WaveManager : MonoBehaviour
                 {
                     ++wave;
                     currentEnemiesSpawned = 0;
-                    maxEnemiesPerWave += 2;
+                    maxEnemiesPerWave += 4;
                     currentTimeToSpawn = 0;
                     startSpawn = true;
                 }
