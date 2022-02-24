@@ -7,7 +7,8 @@ using TMPro;
 
 public class WaveManager : MonoBehaviour
 {
-    private int maxEnemiesPerWave = 10;
+    [SerializeField] private Transform[] spawnPoints;
+    private int maxEnemiesPerWave = 1;
     private float timeToSpawn = 1f;
     private float currentTimeToSpawn = 0;
     private int currentEnemies = 0;
@@ -38,7 +39,7 @@ public class WaveManager : MonoBehaviour
                 currentTimeToSpawn += Time.deltaTime;
                 if (currentTimeToSpawn >= timeToSpawn && currentEnemies < maxEnemiesPerWave)
                 {
-                    PhotonNetwork.Instantiate(Path.Combine("Prefabs", "Zombie"), new Vector3(Random.Range(-10, 10), Random.Range(-10, 10), 0), Quaternion.identity);
+                    PhotonNetwork.Instantiate(Path.Combine("Prefabs", "Zombie"), spawnPoints[Random.Range(0, spawnPoints.Length)].position, Quaternion.identity);
                     ++currentEnemiesSpawned;
                     currentTimeToSpawn = 0;
                 }

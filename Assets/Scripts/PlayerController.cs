@@ -4,11 +4,14 @@ using UnityEngine;
 using Photon.Pun;
 using System.IO;
 using Cinemachine;
+using UnityEngine.UI;
+using UnityEngine.Experimental.Rendering.Universal;
 
-public class PlayerController : MonoBehaviour
+public class PlayerController : MonoBehaviour, IPunObservable
 {
     [SerializeField] private GameObject spriteObject;
     [SerializeField] private float speed;
+    [SerializeField] private Light2D fireLight;
     [SerializeField] private AudioClip fireSound;
     [SerializeField] private Transform firePoint;
     [SerializeField] private float fireRate = 0.75f; //0.13f
@@ -16,13 +19,15 @@ public class PlayerController : MonoBehaviour
     private PhotonView PV;
     private AudioSource audioSource;
 
-    private BoxCollider2D boxCollider;
+    private CircleCollider2D playerCollider;
     private Rigidbody2D rb;
     private Vector2 movement;
     private Vector2 mousePos;
     private CinemachineVirtualCamera cinemachineVirtualCamera;
     private bool isAlive = true;
-    private float health = 3;
+    private float health = 1;
+    private Image healthBarImage;
+    private float cameraShakeTime = 0;
 
     private void Awake()
     {
@@ -38,7 +43,8 @@ public class PlayerController : MonoBehaviour
 
         audioSource = GetComponent<AudioSource>();
         rb = GetComponent<Rigidbody2D>();
-        boxCollider = GetComponent<BoxCollider2D>();
+        playerCollider = GetComponent<CircleCollider2D>();
+        healthBarImage = GameObject.Find("Healthbar").GetComponent<Image>();
     }
 
     void Axis()
@@ -54,17 +60,27 @@ public class PlayerController : MonoBehaviour
         if(Input.GetMouseButton(0) && Time.time > nextFire)
         {
             PV.RPC("ShootRpc", RpcTarget.All);
+            ShakeCamera(4f, .1f);
         }
+
     }
 
     [PunRPC]
     void ShootRpc()
     {
-
         GameObject bullet = Instantiate(Resources.Load<GameObject>("Prefabs/Bullet"), firePoint.position, firePoint.rotation);
         
         audioSource.PlayOneShot(fireSound);
         nextFire = Time.time + fireRate;
+
+        StartCoroutine(ShotFireLight());
+    }
+
+    IEnumerator ShotFireLight()
+    {
+        fireLight.enabled = true;
+        yield return new WaitForSeconds(fireRate / 5);
+        fireLight.enabled = false;
     }
 
     void Update()
@@ -77,6 +93,16 @@ public class PlayerController : MonoBehaviour
                 Shoot();
 
             cinemachineVirtualCamera.Follow = transform;
+
+            if(cameraShakeTime > 0)
+            {
+                cameraShakeTime -= Time.deltaTime;
+                if (cameraShakeTime <= 0)
+                {
+                    CinemachineBasicMultiChannelPerlin noise = cinemachineVirtualCamera.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>();
+                    noise.m_AmplitudeGain = 0;
+                }
+            }
         }
     }
 
@@ -96,20 +122,25 @@ public class PlayerController : MonoBehaviour
             rb.rotation = angle;
         }
     }
-
+    public void ShakeCamera(float intensity, float time)
+    {
+        CinemachineBasicMultiChannelPerlin noise = cinemachineVirtualCamera.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>();
+        noise.m_AmplitudeGain = intensity;
+        cameraShakeTime = time;
+    }
     public bool IsAlive() { 
         return isAlive; 
     }
-
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.GetComponent<Zombie>() != null)
         {
-            health -= 1;
+            health -= 0.34f;
+            healthBarImage.fillAmount = health;
 
-            if(health <= 0)
+            if (health <= 0)
             {
-                PV.RPC("HideDeadPlayer", RpcTarget.All, PV.ViewID);
+                PV.RPC("HideDeadPlayer", RpcTarget.All, PV.ViewID, PhotonNetwork.NickName);
             }
             else
             {
@@ -119,10 +150,16 @@ public class PlayerController : MonoBehaviour
     }
 
     [PunRPC]
-    public void HideDeadPlayer(int playerID)
+    public void HideDeadPlayer(int playerID, string playerName)
     {
         isAlive = false;
-        spriteObject.SetActive(false);
+        spriteObject.SetActive(isAlive);
+        playerCollider.enabled = isAlive;
+        AlertManager.Instance.ShowText(string.Format("{0} morreu =(", playerName), Color.yellow, 0.5f);
+        if (PV.IsMine)
+        {
+            GameOverManager.Instance.ShowPanel();
+        }
     }
 
     [PunRPC]
@@ -134,13 +171,27 @@ public class PlayerController : MonoBehaviour
     [PunRPC]
     IEnumerator Respawn()
     {
-        spriteObject.SetActive(false);
-        boxCollider.enabled = true;
         isAlive = false;
+        spriteObject.SetActive(isAlive);
+        playerCollider.enabled = isAlive;
         yield return new WaitForSeconds(5);
-        transform.position = new Vector3(10, 10, 0);
-        spriteObject.SetActive(true);
-        boxCollider.enabled = true;
         isAlive = true;
+        transform.position = new Vector3(20, 10, 0);
+        spriteObject.SetActive(isAlive);
+        playerCollider.enabled = isAlive;
+    }
+
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+    {
+        if (stream.IsWriting)
+        {
+            stream.SendNext(health);
+            stream.SendNext(isAlive);
+        }
+        else if (stream.IsReading)
+        {
+            health = (float)stream.ReceiveNext();
+            isAlive = (bool)stream.ReceiveNext();
+        }
     }
 }

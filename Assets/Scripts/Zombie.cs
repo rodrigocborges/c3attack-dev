@@ -4,18 +4,24 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public class Zombie : MonoBehaviour
+public class Zombie : MonoBehaviour, IPunObservable
 {
+    [SerializeField] private LayerMask lookLayers;
     [SerializeField] private GameObject blood;
     [SerializeField] private AudioClip splashSound;
     [SerializeField] private AudioClip[] sounds;
     [SerializeField] private float speed;
-    private Vector2 currentPlayerPos;
     private Rigidbody2D rb;
 
-    private Dictionary<int, float> playersInfo = new Dictionary<int, float>();
     private AudioSource audioSource;
     private PhotonView PV;
+
+    private float shortestPlayerDistance = Mathf.Infinity;
+    private PlayerController currentPlayer = null;
+    private bool followingPlayer = true;
+    private Vector2 currentPlayerPos;
+    private RaycastHit2D hit;
+    private Vector2 lookDir;
 
     void Start()
     {
@@ -23,15 +29,21 @@ public class Zombie : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
         PV = GetComponent<PhotonView>();
 
-        if(Random.value >= 0.7f)
+        InvokeRepeating("PlaySoundEffects", 0f, 6f);
+        InvokeRepeating("FindTarget", 0f, 5f);
+    }
+
+    void PlaySoundEffects()
+    {
+        if (Random.value >= 0.7f)
         {
             PV.RPC("PlaySoundRpc", RpcTarget.All);
         }
-            
     }
 
     [PunRPC]
-    void PlaySoundRpc() {
+    void PlaySoundRpc()
+    {
         audioSource.clip = sounds[Random.Range(0, sounds.Length)];
         audioSource.Play();
     }
@@ -45,47 +57,91 @@ public class Zombie : MonoBehaviour
     [PunRPC]
     void SpawnBloodEffect()
     {
-        Instantiate(blood, new Vector3(transform.position.x, transform.position.y, -1), transform.rotation);
+        GameObject splash = Instantiate(blood, new Vector3(transform.position.x, transform.position.y, -1), transform.rotation);
+        StartCoroutine(DestroySpawnBloodEffect(splash));
     }
+
+    IEnumerator DestroySpawnBloodEffect(GameObject splash)
+    {
+        print("DestroySpawnBloodEffect");
+        yield return new WaitForSeconds(5f);
+        if (PV.IsMine)
+        {
+            PhotonNetwork.Destroy(splash);
+        }
+        else
+        {
+            Destroy(splash);
+        }
+    }
+
 
     void Update()
     {
-        foreach(PlayerController playerController in FindObjectsOfType<PlayerController>())
-        {
-            if (!playerController.IsAlive())
-                continue;
-
-            if(playerController.GetComponent<PhotonView>() != null)
-            {
-                PhotonView photonViewPlayer = playerController.GetComponent<PhotonView>();
-                if (!playersInfo.ContainsKey(photonViewPlayer.ViewID))
-                {
-                    playersInfo.Add(photonViewPlayer.ViewID, Vector2.Distance(transform.position, playerController.transform.position));
-                }
-                else
-                {
-                    playersInfo[photonViewPlayer.ViewID] = Vector2.Distance(transform.position, playerController.transform.position);
-                }
-            }
-        }
-
-        if (playersInfo == null || !playersInfo.Any())
-            return;
-
-        int playerIdWithSmallerDistance = playersInfo.Aggregate((l, r) => l.Value < r.Value ? l : r).Key;
-        
-        foreach(PhotonView pv in FindObjectsOfType<PhotonView>())
-        {
-            if (pv.ViewID == playerIdWithSmallerDistance)
-                currentPlayerPos = pv.transform.position;
-        }
+        currentPlayerPos = currentPlayer != null ? (Vector2)currentPlayer.transform.position : Vector2.zero;
     }
+
     void FixedUpdate()
     {
-        rb.position = Vector2.MoveTowards(transform.position, currentPlayerPos, speed * Time.fixedDeltaTime);
 
-        Vector2 lookDir = currentPlayerPos - rb.position;
-        float angle = Mathf.Atan2(lookDir.y, lookDir.x) * Mathf.Rad2Deg;
-        rb.rotation = angle;
+        const float rayDistance = 2;
+        hit = Physics2D.Raycast(rb.position, transform.up, rayDistance, lookLayers);
+
+        if (hit.collider != null)
+        {
+            followingPlayer = false;
+            rb.SetRotation(90);
+        }
+        else
+        {
+            followingPlayer = true;
+        }
+
+        if (followingPlayer)
+        {
+            rb.position = Vector2.MoveTowards(transform.position, currentPlayerPos, speed * Time.fixedDeltaTime);
+            lookDir = currentPlayerPos - rb.position;
+            float angle = Mathf.Atan2(lookDir.y, lookDir.x) * Mathf.Rad2Deg;
+            rb.rotation = angle;
+        }
+
+
+        Debug.DrawRay(rb.position, transform.up, Color.red);
+        print("Following the player: " + followingPlayer);
+
+    }
+
+    private void FindTarget()
+    {
+        IEnumerable<PlayerController> players = FindObjectsOfType<PlayerController>().Where(x => x.IsAlive());
+
+        foreach (PlayerController player in players)
+        {
+            Transform playerTransform = player.transform;
+            float playerDistance = Vector2.Distance(rb.position, playerTransform.position);
+            if (playerDistance < shortestPlayerDistance)
+            {
+                shortestPlayerDistance = playerDistance;
+                currentPlayer = player;
+            }
+        }
+    }
+
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+    {
+        if (stream.IsWriting)
+        {
+            stream.SendNext(followingPlayer);
+            stream.SendNext(currentPlayerPos);
+            stream.SendNext(currentPlayer);
+            stream.SendNext(shortestPlayerDistance);
+        }
+        else if (stream.IsReading)
+        {
+            followingPlayer = (bool)stream.ReceiveNext();
+            currentPlayerPos = (Vector2)stream.ReceiveNext();
+            currentPlayer = (PlayerController)stream.ReceiveNext();
+            shortestPlayerDistance = (float)stream.ReceiveNext();
+        }
     }
 }
