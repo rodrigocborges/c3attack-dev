@@ -10,11 +10,6 @@ public class RoomManager : MonoBehaviourPunCallbacks
     public static RoomManager Instance;
     void Start()
     {
-        if (Instance)
-        {
-            Destroy(gameObject);
-            return;
-        }
         DontDestroyOnLoad(gameObject);
         Instance = this;
     }

@@ -39,12 +39,12 @@ public class PlayerController : MonoBehaviour, IPunObservable
         if (PV.IsMine)
         {
             cinemachineVirtualCamera = FindObjectOfType<CinemachineVirtualCamera>();
+            healthBarImage = GameObject.Find("Healthbar").GetComponent<Image>();
         }
 
         audioSource = GetComponent<AudioSource>();
         rb = GetComponent<Rigidbody2D>();
         playerCollider = GetComponent<CircleCollider2D>();
-        healthBarImage = GameObject.Find("Healthbar").GetComponent<Image>();
     }
 
     void Axis()
@@ -135,16 +135,21 @@ public class PlayerController : MonoBehaviour, IPunObservable
     {
         if (collision.gameObject.GetComponent<Zombie>() != null)
         {
+            if (!PV.IsMine)
+                return;
+
             health -= 0.34f;
-            healthBarImage.fillAmount = health;
+           
+            if(healthBarImage != null)
+                healthBarImage.fillAmount = health;
 
             if (health <= 0)
             {
-                PV.RPC("HideDeadPlayer", RpcTarget.All, PV.ViewID, PhotonNetwork.NickName);
+                PV.RPC("HideDeadPlayer", RpcTarget.All, PV.ViewID, PV.Owner.NickName);
             }
             else
             {
-                PV.RPC("LostLife", RpcTarget.All, PV.ViewID);
+                PV.RPC("LostLife", RpcTarget.All, PV.ViewID, PV.Owner.NickName);
             }
         }
     }
@@ -163,14 +168,15 @@ public class PlayerController : MonoBehaviour, IPunObservable
     }
 
     [PunRPC]
-    public void LostLife(int playerID)
+    public void LostLife(int playerID, string playerName)
     {
-        StartCoroutine(Respawn());
+        StartCoroutine(Respawn(playerName));
     }
 
     [PunRPC]
-    IEnumerator Respawn()
+    IEnumerator Respawn(string playerName)
     {
+        AlertManager.Instance.ShowText(string.Format("{0} perdeu 1 vida", playerName), Color.yellow, 0.5f);
         isAlive = false;
         spriteObject.SetActive(isAlive);
         playerCollider.enabled = isAlive;

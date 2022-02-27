@@ -31,7 +31,14 @@ public class GameOverManager : MonoBehaviour
 
     public void BackToTheLobby()
     {
-        PhotonNetwork.LeaveRoom();
+        StartCoroutine(LeaveRoom());
+    }
+
+    IEnumerator LeaveRoom()
+    {
+        PhotonNetwork.Disconnect();
+        while (PhotonNetwork.IsConnected)
+            yield return null;
         SceneManager.LoadScene(0);
     }
 }

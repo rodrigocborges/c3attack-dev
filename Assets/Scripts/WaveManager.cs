@@ -5,16 +5,16 @@ using System.IO;
 using UnityEngine;
 using TMPro;
 
-public class WaveManager : MonoBehaviour
+public class WaveManager : MonoBehaviour, IPunObservable
 {
     [SerializeField] private Transform[] spawnPoints;
-    private int maxEnemiesPerWave = 1;
-    private float timeToSpawn = 1f;
+    private int maxEnemiesPerWave = 2;
+    private float timeToSpawn = 1.5f;
     private float currentTimeToSpawn = 0;
     private int currentEnemies = 0;
     private int currentEnemiesSpawned = 0;
-    private PhotonView PV;
     private int wave = 1;
+    private const int amountToIncreaseMaxEnemiesPerWave = 3;
 
     private bool startSpawn = true;
 
@@ -23,7 +23,6 @@ public class WaveManager : MonoBehaviour
 
     void Start()
     {
-        PV = GetComponent<PhotonView>();
         waveText = GameObject.Find("WaveText").GetComponent<TMP_Text>();
         zombiesCountText = GameObject.Find("ZombiesCountText").GetComponent<TMP_Text>();
     }
@@ -55,21 +54,35 @@ public class WaveManager : MonoBehaviour
                 {
                     ++wave;
                     currentEnemiesSpawned = 0;
-                    maxEnemiesPerWave += 4;
+                    maxEnemiesPerWave += amountToIncreaseMaxEnemiesPerWave;
                     currentTimeToSpawn = 0;
                     startSpawn = true;
                 }
             }
 
-            PV.RPC("WaveStats", RpcTarget.All, wave, currentEnemiesSpawned, currentEnemies, maxEnemiesPerWave);
+            //PV.RPC("WaveStats", RpcTarget.All, wave, currentEnemiesSpawned, currentEnemies, maxEnemiesPerWave);
 
         }
+
+        waveText.text = "WAVE " + wave;
+        zombiesCountText.text = string.Format("{0}/{1} ({2})", currentEnemiesSpawned, maxEnemiesPerWave, currentEnemies);
     }
 
-    [PunRPC]
-    void WaveStats(int localWave, int localCurrentEnemiesSpawned, int localCurrentEnemies, int localMaxEnemiesPerWave)
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
     {
-        waveText.text = "WAVE " + localWave;
-        zombiesCountText.text = string.Format("{0}/{1} ({2})", localCurrentEnemiesSpawned, localMaxEnemiesPerWave, localCurrentEnemies);
+        if (stream.IsWriting)
+        {
+            stream.SendNext(wave);
+            stream.SendNext(currentEnemies);
+            stream.SendNext(currentEnemiesSpawned);
+            stream.SendNext(maxEnemiesPerWave);
+        }
+        else if (stream.IsReading)
+        {
+            wave = (int)stream.ReceiveNext();
+            currentEnemies = (int)stream.ReceiveNext();
+            currentEnemiesSpawned = (int)stream.ReceiveNext();
+            maxEnemiesPerWave = (int)stream.ReceiveNext();
+        }
     }
 }

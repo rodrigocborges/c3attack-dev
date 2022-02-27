@@ -135,12 +135,16 @@ public class Launcher : MonoBehaviourPunCallbacks
 
     public override void OnJoinRoomFailed(short returnCode, string message)
     {
-        Debug.Log(string.Format("Join Room Failed ({0}): {1}", returnCode, message));
+        AlertManager.Instance.ShowText("Erro ao entrar na sala!", Color.yellow, 0.8f, 0, 230);
+        connectedUIPanel.SetActive(true);
+        loadingPanel.SetActive(false);
     }
 
     public override void OnCreateRoomFailed(short returnCode, string message)
     {
-        Debug.Log(string.Format("Create Room Failed ({0}): {1}", returnCode, message));
+        AlertManager.Instance.ShowText("Erro ao criar a sala!", Color.yellow, 0.8f, 0, 230);
+        connectedUIPanel.SetActive(true);
+        loadingPanel.SetActive(false);
     }
 
     public override void OnPlayerEnteredRoom(Player newPlayer)
